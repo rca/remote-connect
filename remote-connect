@@ -180,7 +180,7 @@ if [ "${INSTALL}" == "NO" ]; then
   done;
 else
   # otherwise, perform the installation
-  echo "initialize..."
+  echo "installing..."
 
   # write the plist file to a tmp location
   write_plist
