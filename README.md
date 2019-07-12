@@ -14,13 +14,13 @@ This requires two things:
 The following command can be run in a Terminal to install the tunnel, where `<ssh hostname>` can be something like `username@ssh_host`:
 
 ```
-curl -s -L 'https://raw.githubusercontent.com/rca/remote-connect/master/remote-connect' > /tmp/remote_connect && bash /tmp/remote_connect --vnc-port 25900 --ssh-port 20022 --host <ssh hostname>
+curl -s -L 'https://raw.githubusercontent.com/rca/remote-connect/master/remote-connect' > /tmp/remote_connect && bash /tmp/remote_connect --vnc-port 59000 --ssh-port 22000 --host <ssh hostname>
 ```
 
 Note: to use this to remotely access multiple Macs, give each one a unique SSH and VNC port.  for example:
 
-- Mac 0: vnc port `25900`, ssh port `20022`
-- Mac 1: vnc port `25901`, ssh port `20023`
+- Mac 0: vnc port `59000`, ssh port `22000`
+- Mac 1: vnc port `59001`, ssh port `22001`
 - etc
 
 The command will produce output like this:
@@ -42,7 +42,7 @@ no-pty ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDPi6buKh79RzyaLknt1GdQiolOUKcAey2i2
 The mac will try to connect to the SSH host every 10 seconds.  Once the remote host has established a connection, the administrator can also ssh to the SSH host to make the machine available on local ports:
 
 ```
-ssh -N -L 10022:localhost:20022 -L 15900:localhost:25900 username@ssh_host
+ssh -N -L 10022:localhost:22000 -L 15900:localhost:59000 username@ssh_host
 ```
 
 With that command running, the remote Mac is accessible on the local Mac via SSH port `10022` and VNC port `15900`.
