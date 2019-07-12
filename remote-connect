@@ -124,8 +124,12 @@ if [ "${0}" == "${REMOTE_CONNECT_PATH}" ]; then
     echo "attempting to connect"
 
     ssh \
+      -v \
       -i ${SSH_ID} \
       -N \
+      -o "ControlMaster no" \
+      -o "ExitOnForwardFailure yes" \
+      -o "IdentityAgent none" \
       -R ${VNC_PORT}:localhost:5900 \
       -R ${SSH_PORT}:localhost:22 \
       -p ${HOST_PORT} \
