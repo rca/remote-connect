@@ -1,0 +1,162 @@
+#!/bin/bash
+set -e
+# set -x
+
+SCRIPT_NAME=$(basename $0)
+
+SSH_ROOT=${HOME}/.ssh
+SSH_ID=${SSH_ROOT}/id_rsa_remote_connect
+
+LAUNCH_AGENT_NAME=com.rreboto.remote-connect
+LAUNCH_AGENT_ROOT=~/Library/LaunchAgents
+PLIST_PATH=${LAUNCH_AGENT_ROOT}/remote-connect.plist
+TMP_PLIST_PATH=/tmp/remote-connect.plist
+
+LOCAL_BIN_ROOT=~/local/bin
+REMOTE_CONNECT_PATH=${LOCAL_BIN_ROOT}/$(basename ${0})
+
+##
+# Parse arguments
+##
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+key="$1"
+
+case $key in
+    -v|--vnc-port)
+    VNC_PORT="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -s|--ssh-port)
+    SSH_PORT="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -h|--host)
+    REMOTE_HOST="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    # --default)
+    # DEFAULT=YES
+    # shift # past argument
+    # ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+if [ "${REMOTE_HOST}" == "" ] || [ "${VNC_PORT}" == "" ] || [ "${SSH_PORT}" == "" ]; then
+  echo "usage: ${SCRIPT_NAME} --vnc-port <vnc_port> --ssh-port <ssh_port> --host <remote_host>"
+  exit 1;
+fi;
+
+function write_plist()
+{
+  cat << EOF > ${TMP_PLIST_PATH}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>${LAUNCH_AGENT_NAME}</string>
+    <key>EnableGlobbing</key>
+    <true/>
+    <key>ProgramArguments</key>
+    <array>
+    <string>${REMOTE_CONNECT_PATH}</string>
+    <string>--vnc-port</string>
+    <string>${VNC_PORT}</string>
+    <string>--ssh-port</string>
+    <string>${SSH_PORT}</string>
+    <string>--host</string>
+    <string>${REMOTE_HOST}</string>
+    </array>
+    <key>KeepAlive</key>
+    <dict>
+      <key>Crashed</key>
+      <true/>
+      <key>SuccessfulExit</key>
+      <true/>
+    </dict>
+    <key>StandardErrorPath</key>
+    <string>/tmp/remote-connect.log</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/remote-connect.log</string>
+  </dict>
+</plist>
+EOF
+}
+
+##
+# Create SSH key when it does not exist
+##
+if [ ! -e ${SSH_ID} ]; then
+  # create and protect the directory
+  mkdir -p ${SSH_ROOT}
+  chmod 0700 ${SSH_ROOT}
+
+  ssh-keygen -t rsa -b 4096 -f ${SSH_ID} -N ''
+fi;
+
+# check to see if this is running from the install location
+# and perform the connection
+if [ "${0}" == "${REMOTE_CONNECT_PATH}" ]; then
+  while [ 1 ]; do
+    echo "attempting to connect"
+
+    ssh \
+      -i ${SSH_ID} \
+      -N \
+      -R ${VNC_PORT}:localhost:5900 \
+      -R ${SSH_PORT}:localhost:22 ${REMOTE_HOST} \
+    || echo "connection failed; retrying ..."
+
+    echo "sleeping 10s; hit ctrl+c to quit"
+    sleep 10
+  done;
+else
+  # otherwise, perform the installation
+  echo "initialize..."
+
+  # write the plist file to a tmp location
+  write_plist ${REMOTE_HOST}
+
+  # copy the plist to its final destination when it does not exist
+  # or the files differ
+  copy_plist=0
+  if [ ! -e ${PLIST_PATH} ]; then
+    copy_plist=1
+  else  # the file already exists, check if it differs from the latest version
+    diff -q ${TMP_PLIST_PATH} ${PLIST_PATH} > /dev/null || copy_plist=1
+
+    if [ "${copy_plist}" == "1" ]; then
+      launchctl unload -w ${PLIST_PATH}
+      rm -f ${PLIST_PATH}
+    fi;
+  fi;
+
+  # create local bin directory and copy this script
+  mkdir -p ${LOCAL_BIN_ROOT}
+  cp $0 ${REMOTE_CONNECT_PATH}
+  chmod +x ${REMOTE_CONNECT_PATH}
+
+  # in case there is an existing SSH running, kill it and it should restart
+  pkill -f 'ssh.*5900' || true
+
+  if [ "${copy_plist}" == "1" ]; then
+    mkdir -p ${LAUNCH_AGENT_ROOT}
+    cp ${TMP_PLIST_PATH} ${PLIST_PATH}
+    launchctl load -w ${PLIST_PATH}
+  fi;
+
+  rm -f ${TMP_PLIST_PATH}
+fi;
+
+echo "copy and paste this to your administrator"
+cat ${SSH_ID}.pub
