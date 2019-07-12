@@ -88,12 +88,7 @@ function write_plist()
     <string>${REMOTE_HOST}</string>
     </array>
     <key>KeepAlive</key>
-    <dict>
-      <key>Crashed</key>
-      <true/>
-      <key>SuccessfulExit</key>
-      <true/>
-    </dict>
+    <true/>
     <key>StandardErrorPath</key>
     <string>/tmp/remote-connect.log</string>
     <key>StandardOutPath</key>
