@@ -22,9 +22,9 @@ HOST_PORT=22
 # Parse arguments
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
-key="$1"
+  key="$1"
 
-case $key in
+  case $key in
     -v|--vnc-port)
     VNC_PORT="$2"
     shift # past argument
@@ -53,7 +53,7 @@ case $key in
     POSITIONAL+=("$1") # save it in an array for later
     shift # past argument
     ;;
-esac
+  esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
