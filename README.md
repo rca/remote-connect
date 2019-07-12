@@ -33,10 +33,10 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDPi6buKh79RzyaLknt1GdQiolOUKcAey2i2xTPbq3/
 
 Have the remote user copy and paste the information above into text / slack / email / postal service.
 
-On the ssh host, place the public key above into `~username/.ssh/authorized_keys`.  The key can be prefixed with `no-pty` in order to prevent the key from being used to gain shell access to the ssh host.  For example:
+On the ssh host, place the public key above into `~username/.ssh/authorized_keys`.  The key can be prefixed with `restrict,port-forwarding` in order to prevent the key from being used to gain shell access to the ssh host.  For example:
 
 ```
-no-pty ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDPi6buKh79RzyaLknt1GdQiolOUKcAey2i2xTPbq3/MDQy3PRvCafX080saqL8q2q/lJiayk2N7XXGR7oBy1d4tlsR89yAQQpMyVjaTwBgdP6hILe0JbjS+7PYaYmkuExWbNQz39u1gP5B5z/rHFFjqJ8tT7rXv0nQoGTYGoSf4tpcKhFAz5JYe43s7EHStkacxmXBUexoa2kNwu0i7o4TcEanI9qKZBMw7n1MRNhjEAxaxD6vil8yCAjKWAZRs9gWLU5sR4B03fYitCH5Bc+4XsYM2Ub85QARvhZ3Yq/bRHKuuzEnIwUb4jGPyo0GbOnNt6hbY/WTcO0FJryqqmqypkEf32J0+NlbJbAuq2CiEsOoTL4EWpQIoPwSvJC7LHoTi5dXb7nrhci+T29vIEvug+4lVEbsaX7GQd+sp6rfaTE2xgrbVTTkF4xOvPowAUONGvWbanRZeFCvfXNZ4OmE8qfur4mNDDrqQ0nO/7RYNOTbS5MO509913FkYbTlvct8RHHtvGMYXJl9juu744IWOHZcudWEucsLm4Xj+X3peVZxUu7ZONT1L7ewEY68yYxs1VE0LhEMB912NVaSKUR/gCr2W0ACY81vy/9HrUr+wItW6LXHiCDlHIFlpgmajv//815/unuW2rMM37GSmmX17eXJlCDR+/0P71DUM2qMfQ== berto@mymac
+restrict,port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDPi6buKh79RzyaLknt1GdQiolOUKcAey2i2xTPbq3/MDQy3PRvCafX080saqL8q2q/lJiayk2N7XXGR7oBy1d4tlsR89yAQQpMyVjaTwBgdP6hILe0JbjS+7PYaYmkuExWbNQz39u1gP5B5z/rHFFjqJ8tT7rXv0nQoGTYGoSf4tpcKhFAz5JYe43s7EHStkacxmXBUexoa2kNwu0i7o4TcEanI9qKZBMw7n1MRNhjEAxaxD6vil8yCAjKWAZRs9gWLU5sR4B03fYitCH5Bc+4XsYM2Ub85QARvhZ3Yq/bRHKuuzEnIwUb4jGPyo0GbOnNt6hbY/WTcO0FJryqqmqypkEf32J0+NlbJbAuq2CiEsOoTL4EWpQIoPwSvJC7LHoTi5dXb7nrhci+T29vIEvug+4lVEbsaX7GQd+sp6rfaTE2xgrbVTTkF4xOvPowAUONGvWbanRZeFCvfXNZ4OmE8qfur4mNDDrqQ0nO/7RYNOTbS5MO509913FkYbTlvct8RHHtvGMYXJl9juu744IWOHZcudWEucsLm4Xj+X3peVZxUu7ZONT1L7ewEY68yYxs1VE0LhEMB912NVaSKUR/gCr2W0ACY81vy/9HrUr+wItW6LXHiCDlHIFlpgmajv//815/unuW2rMM37GSmmX17eXJlCDR+/0P71DUM2qMfQ== berto@mymac
 ```
 
 The mac will try to connect to the SSH host every 10 seconds.  Once the remote host has established a connection, the administrator can also ssh to the SSH host to make the machine available on local ports:
