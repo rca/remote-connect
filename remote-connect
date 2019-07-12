@@ -4,20 +4,64 @@ set -e
 
 SCRIPT_NAME=$(basename $0)
 
-SSH_ROOT=${HOME}/.ssh
-SSH_ID=${SSH_ROOT}/id_rsa_remote_connect
-HOST_KEYS_CACHE_PATH=${SSH_ROOT}/remote_connect_host_keys
-KNOWN_HOSTS_PATH=${SSH_ROOT}/known_hosts
+SSH_CONFIG_DIR=.ssh
+SSH_ID_FILENAME=id_rsa_remote_connect
+HOST_KEYS_CACHE_FILENAME=remote_connect_host_keys
+KNOWN_HOSTS_FILENAME=known_hosts
 
 LAUNCH_AGENT_NAME=com.rreboto.remote-connect
 LAUNCH_AGENT_ROOT=~/Library/LaunchAgents
-PLIST_PATH=${LAUNCH_AGENT_ROOT}/remote-connect.plist
+LAUNCH_DAEMON_ROOT=/Library/LaunchDaemons
+
 TMP_PLIST_PATH=/tmp/remote-connect.plist
 
 LOCAL_BIN_ROOT=~/local/bin
-REMOTE_CONNECT_PATH=${LOCAL_BIN_ROOT}/$(basename ${0})
 
 HOST_PORT=22
+INSTALL=NO
+
+# whether to install as a LaunchDaemon instead of a user-level LaunchAgent
+DAEMON=NO
+if [ "$(whoami)" == "root" ]; then
+  DAEMON=YES
+fi;
+
+
+# writes the plist to a temp location
+function write_plist()
+{
+  cat << EOF > ${TMP_PLIST_PATH}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>${LAUNCH_AGENT_NAME}</string>
+    <key>EnableGlobbing</key>
+    <true/>
+    <key>ProgramArguments</key>
+    <array>
+    <string>${remote_connect_path}</string>
+    <string>--vnc-port</string>
+    <string>${VNC_PORT}</string>
+    <string>--ssh-port</string>
+    <string>${SSH_PORT}</string>
+    <string>--host-port</string>
+    <string>${HOST_PORT}</string>
+    <string>--host</string>
+    <string>${REMOTE_HOST}</string>
+    </array>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/tmp/remote-connect.log</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/remote-connect.log</string>
+  </dict>
+</plist>
+EOF
+}
+
 
 # Parse arguments
 POSITIONAL=()
@@ -25,6 +69,15 @@ while [[ $# -gt 0 ]]; do
   key="$1"
 
   case $key in
+    -i|--install)
+    INSTALL=YES
+    shift # past argument
+    ;;
+    -n|--name)
+    LAUNCH_AGENT_NAME="$2"
+    shift # past argument
+    shift # past value
+    ;;
     -v|--vnc-port)
     VNC_PORT="$2"
     shift # past argument
@@ -63,69 +116,51 @@ if [ "${REMOTE_HOST}" == "" ] || [ "${VNC_PORT}" == "" ] || [ "${SSH_PORT}" == "
   exit 1;
 fi;
 
-# writes the plist to a temp location
-function write_plist()
-{
-  cat << EOF > ${TMP_PLIST_PATH}
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key>
-    <string>${LAUNCH_AGENT_NAME}</string>
-    <key>EnableGlobbing</key>
-    <true/>
-    <key>ProgramArguments</key>
-    <array>
-    <string>${REMOTE_CONNECT_PATH}</string>
-    <string>--vnc-port</string>
-    <string>${VNC_PORT}</string>
-    <string>--ssh-port</string>
-    <string>${SSH_PORT}</string>
-    <string>--host-port</string>
-    <string>${HOST_PORT}</string>
-    <string>--host</string>
-    <string>${REMOTE_HOST}</string>
-    </array>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/tmp/remote-connect.log</string>
-    <key>StandardOutPath</key>
-    <string>/tmp/remote-connect.log</string>
-  </dict>
-</plist>
-EOF
-}
+# adjust command prefix and paths for when this is installed as a daemon
+launch_root=${LAUNCH_AGENT_ROOT}
+local_bin_root=${LOCAL_BIN_ROOT}
+ssh_root=${HOME}/${SSH_CONFIG_DIR}
+
+if [ "${DAEMON}" == "YES" ]; then
+  launch_root=${LAUNCH_DAEMON_ROOT}
+  local_bin_root=~root/local/bin
+  ssh_root=~root/${SSH_CONFIG_DIR}
+fi;
+
+remote_connect_path=${local_bin_root}/$(basename ${0})
+ssh_id_path=${ssh_root}/${SSH_ID_FILENAME}
+known_hosts_path=${ssh_root}/${KNOWN_HOSTS_FILENAME}
+plist_path=${launch_root}/${LAUNCH_AGENT_NAME}.plist
 
 # Create SSH key when it does not exist
-if [ ! -e ${SSH_ID} ]; then
+if [ ! -e ${ssh_id_path} ]; then
   # create and protect the directory
-  mkdir -p ${SSH_ROOT}
-  chmod 0700 ${SSH_ROOT}
+  mkdir -p ${ssh_root}
+  chmod 0700 ${ssh_root}
 
-  ssh-keygen -t rsa -b 4096 -f ${SSH_ID} -N ''
+  ssh-keygen -t rsa -b 4096 -f ${ssh_id_path} -N ''
 fi;
 
 # get host keys the first time
-cache_path=${HOST_KEYS_CACHE_PATH}-$(echo ${REMOTE_HOST}:${HOST_PORT} | shasum -a 256 | awk '{print $1}')
+cache_path=${ssh_root}/${HOST_KEYS_CACHE_FILENAME}-$(echo ${REMOTE_HOST}:${HOST_PORT} | shasum -a 256 | awk '{print $1}')
 if [ ! -e ${cache_path} ]; then
   # parse out the username
   remote_hostname=${REMOTE_HOST#*@}
 
+  # get the remote host keys in order to satisfy strict host key checking
   ssh-keyscan -p ${HOST_PORT} ${remote_hostname} > ${cache_path}
-  cat ${cache_path} >> ${KNOWN_HOSTS_PATH}
+  cat ${cache_path} >> ${known_hosts_path}
 fi;
 
 # check to see if this is running from the install location
 # and perform the connection
-if [ "${0}" == "${REMOTE_CONNECT_PATH}" ]; then
+if [ "${INSTALL}" == "NO" ]; then
   while [ 1 ]; do
     echo "attempting to connect"
 
     ssh \
       -v \
-      -i ${SSH_ID} \
+      -i ${ssh_id_path} \
       -N \
       -o "ControlMaster no" \
       -o "ExitOnForwardFailure yes" \
@@ -144,39 +179,39 @@ else
   echo "initialize..."
 
   # write the plist file to a tmp location
-  write_plist ${REMOTE_HOST}
+  write_plist
 
   # copy the plist to its final destination when it does not exist
   # or the files differ
   copy_plist=0
-  if [ ! -e ${PLIST_PATH} ]; then
+  if [ ! -e ${plist_path} ]; then
     copy_plist=1
   else  # the file already exists, check if it differs from the latest version
-    diff -q ${TMP_PLIST_PATH} ${PLIST_PATH} > /dev/null || copy_plist=1
+    diff -q ${TMP_PLIST_PATH} ${plist_path} > /dev/null || copy_plist=1
 
     if [ "${copy_plist}" == "1" ]; then
-      launchctl unload -w ${PLIST_PATH}
-      rm -f ${PLIST_PATH}
+      launchctl unload -w ${plist_path}
+      rm -f ${plist_path}
     fi;
   fi;
 
   # create local bin directory and copy this script
-  mkdir -p ${LOCAL_BIN_ROOT}
-  cp $0 ${REMOTE_CONNECT_PATH}
-  chmod +x ${REMOTE_CONNECT_PATH}
+  mkdir -p ${local_bin_root}
+  cp $0 ${remote_connect_path}
+  chmod +x ${remote_connect_path}
 
   # in case there is an existing SSH running, kill it and it should restart
   pkill -f 'ssh.*ControlMaster.*5900' || true
-  pkill -f 'remote-connect.*59' || true
+  pkill -f "${SCRIPT_NAME}.\*59" || true
 
   if [ "${copy_plist}" == "1" ]; then
-    mkdir -p ${LAUNCH_AGENT_ROOT}
-    cp ${TMP_PLIST_PATH} ${PLIST_PATH}
-    launchctl load -w ${PLIST_PATH}
+    mkdir -p ${launch_root}
+    cp ${TMP_PLIST_PATH} ${plist_path}
+    launchctl load -w ${plist_path}
   fi;
 
   rm -f ${TMP_PLIST_PATH}
 fi;
 
 echo "copy and paste this to your administrator"
-cat ${SSH_ID}.pub
+cat ${ssh_id_path}.pub
