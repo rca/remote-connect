@@ -215,4 +215,7 @@ else
   fi;
 
   rm -f ${TMP_PLIST_PATH}
+
+  # self cleanup on install
+  rm -f $0 || true
 fi;
