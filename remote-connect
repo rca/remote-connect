@@ -15,12 +15,9 @@ TMP_PLIST_PATH=/tmp/remote-connect.plist
 LOCAL_BIN_ROOT=~/local/bin
 REMOTE_CONNECT_PATH=${LOCAL_BIN_ROOT}/$(basename ${0})
 
-##
-# Parse arguments
-##
-
 HOST_PORT=22
 
+# Parse arguments
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 key="$1"
@@ -58,11 +55,13 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
+# ensure required args are passed
 if [ "${REMOTE_HOST}" == "" ] || [ "${VNC_PORT}" == "" ] || [ "${SSH_PORT}" == "" ]; then
   echo "usage: ${SCRIPT_NAME} --vnc-port <vnc_port> --ssh-port <ssh_port> --host <remote_host>"
   exit 1;
 fi;
 
+# writes the plist to a temp location
 function write_plist()
 {
   cat << EOF > ${TMP_PLIST_PATH}
@@ -102,9 +101,7 @@ function write_plist()
 EOF
 }
 
-##
 # Create SSH key when it does not exist
-##
 if [ ! -e ${SSH_ID} ]; then
   # create and protect the directory
   mkdir -p ${SSH_ROOT}
