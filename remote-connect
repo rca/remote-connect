@@ -162,7 +162,8 @@ else
   chmod +x ${REMOTE_CONNECT_PATH}
 
   # in case there is an existing SSH running, kill it and it should restart
-  pkill -f 'ssh.*5900' || true
+  pkill -f 'ssh.*ControlMaster.*5900' || true
+  pkill -f 'remote-connect.*59' || true
 
   if [ "${copy_plist}" == "1" ]; then
     mkdir -p ${LAUNCH_AGENT_ROOT}
