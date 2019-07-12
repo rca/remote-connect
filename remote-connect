@@ -141,6 +141,10 @@ if [ ! -e ${ssh_id_path} ]; then
   ssh-keygen -t rsa -b 4096 -f ${ssh_id_path} -N ''
 fi;
 
+# do this now in case the connection gets disrupted
+echo "copy and paste this to your administrator"
+cat ${ssh_id_path}.pub
+
 # get host keys the first time
 cache_path=${ssh_root}/${HOST_KEYS_CACHE_FILENAME}-$(echo ${REMOTE_HOST}:${HOST_PORT} | shasum -a 256 | awk '{print $1}')
 if [ ! -e ${cache_path} ]; then
@@ -212,6 +216,3 @@ else
 
   rm -f ${TMP_PLIST_PATH}
 fi;
-
-echo "copy and paste this to your administrator"
-cat ${ssh_id_path}.pub
