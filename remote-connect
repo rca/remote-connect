@@ -6,6 +6,8 @@ SCRIPT_NAME=$(basename $0)
 
 SSH_ROOT=${HOME}/.ssh
 SSH_ID=${SSH_ROOT}/id_rsa_remote_connect
+HOST_KEYS_CACHE_PATH=${SSH_ROOT}/remote_connect_host_keys
+KNOWN_HOSTS_PATH=${SSH_ROOT}/known_hosts
 
 LAUNCH_AGENT_NAME=com.rreboto.remote-connect
 LAUNCH_AGENT_ROOT=~/Library/LaunchAgents
@@ -108,6 +110,16 @@ if [ ! -e ${SSH_ID} ]; then
   chmod 0700 ${SSH_ROOT}
 
   ssh-keygen -t rsa -b 4096 -f ${SSH_ID} -N ''
+fi;
+
+# get host keys the first time
+cache_path=${HOST_KEYS_CACHE_PATH}-$(echo ${REMOTE_HOST}:${HOST_PORT} | shasum -a 256 | awk '{print $1}')
+if [ ! -e ${cache_path} ]; then
+  # parse out the username
+  remote_hostname=${REMOTE_HOST#*@}
+
+  ssh-keyscan -p ${HOST_PORT} ${remote_hostname} > ${cache_path}
+  cat ${cache_path} >> ${KNOWN_HOSTS_PATH}
 fi;
 
 # check to see if this is running from the install location
