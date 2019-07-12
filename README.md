@@ -14,7 +14,7 @@ This requires two things:
 The following command can be run in a Terminal to install the tunnel, where `<ssh hostname>` can be something like `username@ssh_host`:
 
 ```
-curl -s -L 'https://raw.githubusercontent.com/rca/remote-connect/master/remote-connect' > /tmp/remote_connect && bash /tmp/remote_connect --vnc-port 59000 --ssh-port 22000 --host <ssh hostname>
+curl -s -L 'https://raw.githubusercontent.com/rca/remote-connect/master/remote-connect' > /tmp/remote-connect && bash /tmp/remote-connect --vnc-port 59000 --ssh-port 22000 --host <ssh hostname>
 ```
 
 Note: to use this to remotely access multiple Macs, give each one a unique SSH and VNC port.  for example:
